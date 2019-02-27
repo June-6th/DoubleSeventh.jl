@@ -1,0 +1,7 @@
+name = "DoubleSeventh"
+uuid = "dbff8388-3a64-11e9-25d0-d3fdc539025a"
+authors = ["June-6th <2660994113@qq.com>"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
