@@ -1,4 +1,4 @@
-module IterativeMethods
+module LinearEquations
 
 using LinearAlgebra: diag, norm, diagind
 

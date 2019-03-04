@@ -1,5 +1,5 @@
 module DoubleSeventh
 
-include("iterative_methods.jl")
+include("linear_equations.jl")
 
 end # module
