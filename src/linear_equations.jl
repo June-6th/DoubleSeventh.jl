@@ -100,7 +100,7 @@ U = \begin{bmatrix}
 \end{cases}
 ```
 
-将 ``x^{(k + 1)}`` 的分量移至左边并同乘以 ``D`` 后, 可得其矩阵形式为 ``(D + L) x^{(k + 1)} = U x^{(k)} + b``, 于是 ``x^{(k + 1)} = - (D + L)^{-1} U x^{(k)} + (D + L)^{-1} b``, 故 GaussSeidel 迭代法的迭代矩阵为 ``B_{GS} = (D + L)^{-1} U``, 常数项为 ``f = (D + L)^{-1} b``.
+将 ``x^{(k + 1)}`` 的分量移至左边并同乘以 ``D`` 后, 可得其矩阵形式为 ``(D + L) x^{(k + 1)} = U x^{(k)} + b``, 于是 ``x^{(k + 1)} = - (D + L)^{-1} U x^{(k)} + (D + L)^{-1} b``, 故 GaussSeidel 迭代法的迭代矩阵为 ``B_{GS} = - (D + L)^{-1} U``, 常数项为 ``f = (D + L)^{-1} b``.
 """
 const GaussSeidel = GaussSeidelMethod()
 @doc raw"""
@@ -156,7 +156,7 @@ U = \begin{bmatrix}
 x^{(k + 1)} = (D + \omega L)^{-1} ((1 - \omega) D - \omega U) x^{(k)} + \omega (D + \omega L)^{-1} b
 ```
 
-故 SOR 迭代法的迭代矩阵为 ``B_{SOR} = (D + \omega L)^{-1} ((1 - \omega) D - \omega U)``, 常数项为 ``f = \omega (D + \omega L)^{-1}``.
+故 SOR 迭代法的迭代矩阵为 ``B_{SOR} = (D + \omega L)^{-1} ((1 - \omega) D - \omega U)``, 常数项为 ``f = \omega (D + \omega L)^{-1} b``.
 """
 const SOR = SORMethod()
 
