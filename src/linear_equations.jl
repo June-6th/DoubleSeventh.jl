@@ -2,12 +2,20 @@ module LinearEquations
 
 using LinearAlgebra: diag, norm, diagind
 
-export solve, multiple_itr, gen_itr, IterativeMethod, Jacobi, JacobiMethod, GaussSeidel, GaussSeidelMethod, SOR, SORMethod
+export
+    solve,
+    # 迭代法类型及其实例
+    IterativeMethod,
+    JacobiMethod, Jacobi,
+    GaussSeidelMethod, GaussSeidel,
+    SORMethod, SOR,
+    # 迭代法相关函数
+    multiple_itr, gen_itr
 
 """
     IterativeMethod
 
-所有迭代法的抽象类型。
+所有迭代法的抽象类型.
 """
 abstract type IterativeMethod end
 
@@ -52,7 +60,7 @@ U = \begin{bmatrix}
 \end{cases}
 ```
 
-其矩阵形式为 ``x^{(k + 1)} = - D^{-1} (L + U) x^{(k)} + D^{-1} b``, 故 Jacobi 迭代法的迭代矩阵为 ``B_{J} = D^{-1} (- L - U)``, 常数项为 ``f = D^{-1} b``, 
+其矩阵形式为 ``x^{(k + 1)} = - D^{-1} (L + U) x^{(k)} + D^{-1} b``, 故 Jacobi 迭代法的迭代矩阵为 ``B_{J} = - D^{-1} (L + U)``, 常数项为 ``f = D^{-1} b``, 
 """
 const Jacobi = JacobiMethod()
 @doc raw"""
@@ -153,12 +161,12 @@ x^{(k + 1)} = (D + \omega L)^{-1} ((1 - \omega) D - \omega U) x^{(k)} + \omega (
 const SOR = SORMethod()
 
 """
-    gen_itr(A, b, alg)
+    gen_itr(A, b, alg, args...; kwargs...)
 
 生成线性方程组 `Ax=b` 在迭代算法 `alg` 下的迭代函数.
 
 # Implementation
-设所生成的迭代函数为 `itr`, 迭代初值为 `x`, 则 `itr(x, args...; kwargs...)` 返回 `x` 进行一次迭代后生成的值, 其中的 `args` 和 `kwargs` 为迭代算法 `alg` 中的参数, 如 [`SOR`](@ref) 迭代法中的松弛因子 `ω`.
+设所生成的迭代函数为 `itr`, 迭代初值为 `x`, 则 `itr(x)` 返回 `x` 进行一次迭代后生成的值, `args` 和 `kwargs` 为迭代算法 `alg` 的参数, 如 [`SOR`](@ref) 迭代法中的松弛因子 `ω`.
 """
 function gen_itr end
 
@@ -169,7 +177,7 @@ function gen_itr(A::AbstractMatrix, b::AbstractVector, alg::JacobiMethod)::Funct
     f = d; @. f = b * d
     function itr(x::AbstractVector)::AbstractVector
         axes(x) == axes(f) || throw(DimensionMismatch("维度不匹配"))
-        y = similar(x, promote_type(x, f)); @. y = f
+        y = similar(x, promote_type(eltype(x), eltype(f))); @. y = f
         @inbounds for j in axes(A, 2)
             for i in axes(A, 1)
                 y[i] += B[i, j] * x[j]
@@ -186,7 +194,7 @@ function gen_itr(A::AbstractMatrix, b::AbstractVector, alg::GaussSeidelMethod)::
     f = d; @. f = b * d
     function itr(x::AbstractVector)::AbstractVector
         axes(x) == axes(f) || throw(DimensionMismatch("维度不匹配"))
-        y = similar(x, promote_type(x, f)); @. y = f
+        y = similar(x, promote_type(eltype(x), eltype(f))); @. y = f
         @inbounds for j in (firstindex(B, 2) + 1):lastindex(B, 2)
             for i in firstindex(B, 1):(j - 1)
                 y[i] += B[i, j] * x[j]
@@ -202,28 +210,29 @@ function gen_itr(A::AbstractMatrix, b::AbstractVector, alg::GaussSeidelMethod)::
 end
 
 """
-    gen_itr(A, b, alg::SORMethod)
+    gen_itr(A, b, alg::SORMethod, ω)
 
-[`SOR`](@ref) 法生成的迭代函数 `itr` 的调用形式为 `itr(x, ω)`, 其中 `x` 为此次迭代的初值, `ω` 为松弛因子.
+`ω` 为 [`SOR`](@ref) 法中的松弛因子.
 """
-function gen_itr(A::AbstractMatrix, b::AbstractVector, alg::SORMethod)::Function
+function gen_itr(A::AbstractMatrix, b::AbstractVector, alg::SORMethod, ω::Real)::Function
     (axes(A, 1) == axes(A, 2) && axes(A, 2) == axes(b, 1)) || throw(DimensionMismatch("维度不匹配"))
     d = one(promote_type(eltype(A), eltype(b))) ./ diag(A)
-    B = @. - A * d
+    B = @. - ω * A * d
     f = d; @. f = b * d
-    function itr(x::AbstractVector, ω::Real)::AbstractVector
+    function itr(x::AbstractVector)::AbstractVector
         axes(x) == axes(f) || throw(DimensionMismatch("维度不匹配"))
-        y = @. (1 - ω) * x₀ + ω * f
+        y = @. (1 - ω) * x + ω * f
         @inbounds for j in (firstindex(B, 2) + 1):lastindex(B, 2)
             for i in firstindex(B, 1):(j - 1)
-                y[i] += ω * B[i, j] * x[j]
+                y[i] += B[i, j] * x[j]
             end
         end
         @inbounds for j in axes(B, 2)
             for i in (j + 1):lastindex(B, 2)
-                y[i] += ω * B[i, j] * y[j]
+                y[i] += B[i, j] * y[j]
             end
         end
+        y
     end
 end
 
@@ -236,34 +245,33 @@ end
 - `x₀::AbstractVector`: 迭代初值;
 - `n::Integer=1000`: 最大迭代次数;
 - `ϵ::Union{Real, Nothing}=nothing`: 若为 `nothing` 则不中止迭代, 否则在迭代值减迭代初值的 2 阶范数小于 `ϵ` 时中止迭代;
-- `args`, `kwargs`: 与迭代初值 `x₀` 一同作为迭代函数 `itr` 的参数, 迭代中 `itr` 调用格式为 `itr(x₀, args...; kwargs...)`.
 """
-function multiple_itr(itr::Function, x₀, args...; n::Integer=1000, ϵ::Union{Real, Nothing}=nothing, kwargs...)
+function multiple_itr(itr::Function, x₀; n::Integer=1000, ϵ::Union{Real, Nothing}=nothing)
     n <= 0 && throw(n, "迭代次数需大于 0")
-    x, y = x₀, itr(x₀, args...; kwargs...)
+    x, y = x₀, itr(x₀)
     itr_times = 1
     while itr_times < n && (isnothing(ϵ) || norm(x - y) > ϵ)
-        x, y = y, itr(y, args...; kwargs...)
+        x, y = y, itr(y)
         itr_times += 1
     end
     y, itr_times, norm(x - y)
 end
 
 """
-    solve(A, b, alg, x₀=zero(b), args...; n=1000, ϵ=1e-10, kwargs...)
+    solve(A, b, alg::IterativeMethod, x₀=zero(b), args...; n=1000, ϵ=1e-10, kwargs...)
 
-计算线性方程组 `Ax=b` 的近似解, 所用迭代算法为 `alg`.
+使用迭代算法 `alg` 计算线性方程组 `Ax=b` 的近似解.
 
 # Arguments
 - `x₀::AbstractVector=zero(b)`: 迭代初值;
 - `n::Integer=1000`: 最大迭代次数;
 - `ϵ::Real=1e-10`: 近似控制求解精度, 在迭代中, 若某次迭代的迭代值减迭代初值的 2 阶范数小于 `ϵ` 时停止迭代; 需注意的是, 此时精确解减近似解的 2 阶范数不一定小于 `ϵ`;
-- `args`, `kwargs`: 与迭代初值 `x₀` 一同作为迭代函数 `itr` 的参数, 其中 `itr = gen_itr(A, b, alg)`, 迭代中 `itr` 调用格式为 `itr(x₀, args...; kwargs...)`.
+- `args`, `kwargs`: 与迭代初值 `x₀` 一同作为迭代算法 `alg` 的参数.
 """
 function solve(A::AbstractMatrix, b::AbstractVector, alg::IterativeMethod, x₀::AbstractVector=zero(b), args...;n::Integer=1000, ϵ::Real=1e-10, kwargs...)
     n <= 0 && throw(n, "迭代次数需大于 0")
-    itr = gen_itr(A, b, alg)
-    multiple_itr(itr, x₀, args...;n=n, ϵ=ϵ, kwargs...)[1]
+    itr = gen_itr(A, b, alg, args...; kwargs...)
+    multiple_itr(itr, x₀; n=n, ϵ=ϵ)[1]
 end
 
 end # module
