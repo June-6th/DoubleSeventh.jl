@@ -2,7 +2,7 @@ using Test
 import LinearAlgebra: Diagonal, LowerTriangular, UpperTriangular
 using .LinearEquations
 
-# A 为系数矩阵, b 为常数项, c 为迭代初值, 第二个字母指代类型.
+# A 为系数矩阵, b 为常数项, x 为迭代初值, 第二个字母指代类型.
 A = Ar = Rational{Int}[
     2   1   0;
     0   2   1;
